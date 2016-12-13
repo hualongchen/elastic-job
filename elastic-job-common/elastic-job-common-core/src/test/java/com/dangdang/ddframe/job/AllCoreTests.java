@@ -20,6 +20,7 @@ package com.dangdang.ddframe.job;
 import com.dangdang.ddframe.job.api.AllApiTests;
 import com.dangdang.ddframe.job.config.AllConfigTests;
 import com.dangdang.ddframe.job.context.AllContextTests;
+import com.dangdang.ddframe.job.election.ElectionServiceTest;
 import com.dangdang.ddframe.job.event.AllEventTests;
 import com.dangdang.ddframe.job.exception.AllExceptionTests;
 import com.dangdang.ddframe.job.executor.AllExecutorTests;
@@ -40,7 +41,8 @@ import org.junit.runners.Suite.SuiteClasses;
         AllExecutorTests.class, 
         AllEventTests.class, 
         AllExceptionTests.class, 
-        AllUtilTests.class
+        AllUtilTests.class,
+        ElectionServiceTest.class
     })
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AllCoreTests {

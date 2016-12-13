@@ -19,6 +19,7 @@ package com.dangdang.ddframe.job.reg.zookeeper;
 
 import com.dangdang.ddframe.job.reg.base.CoordinatorRegistryCenter;
 import com.dangdang.ddframe.job.reg.exception.RegExceptionHandler;
+import com.dangdang.ddframe.job.util.zookeeper.CuratorFrameworks;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -26,17 +27,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
-import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 import java.util.Collections;
@@ -45,7 +39,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 基于Zookeeper的注册中心.
@@ -60,6 +53,7 @@ public class ZookeeperRegistryCenter implements CoordinatorRegistryCenter {
     
     private final Map<String, TreeCache> caches = new HashMap<>();
     
+    @Getter
     private CuratorFramework client;
     
     public ZookeeperRegistryCenter(final ZookeeperConfiguration zkConfig) {
@@ -68,44 +62,7 @@ public class ZookeeperRegistryCenter implements CoordinatorRegistryCenter {
     
     @Override
     public void init() {
-        log.debug("Elastic job: zookeeper registry center init, server lists is: {}.", zkConfig.getServerLists());
-        Builder builder = CuratorFrameworkFactory.builder()
-                .connectString(zkConfig.getServerLists())
-                .retryPolicy(new ExponentialBackoffRetry(zkConfig.getBaseSleepTimeMilliseconds(), zkConfig.getMaxRetries(), zkConfig.getMaxSleepTimeMilliseconds()))
-                .namespace(zkConfig.getNamespace());
-        if (0 != zkConfig.getSessionTimeoutMilliseconds()) {
-            builder.sessionTimeoutMs(zkConfig.getSessionTimeoutMilliseconds());
-        }
-        if (0 != zkConfig.getConnectionTimeoutMilliseconds()) {
-            builder.connectionTimeoutMs(zkConfig.getConnectionTimeoutMilliseconds());
-        }
-        if (!Strings.isNullOrEmpty(zkConfig.getDigest())) {
-            builder.authorization("digest", zkConfig.getDigest().getBytes(Charsets.UTF_8))
-                   .aclProvider(new ACLProvider() {
-                       
-                       @Override
-                       public List<ACL> getDefaultAcl() {
-                           return ZooDefs.Ids.CREATOR_ALL_ACL;
-                       }
-                       
-                       @Override
-                       public List<ACL> getAclForPath(final String path) {
-                           return ZooDefs.Ids.CREATOR_ALL_ACL;
-                       }
-                   });
-        }
-        client = builder.build();
-        client.start();
-        try {
-            if (!client.blockUntilConnected(zkConfig.getMaxSleepTimeMilliseconds() * zkConfig.getMaxRetries(), TimeUnit.MILLISECONDS)) {
-                client.close();
-                throw new KeeperException.OperationTimeoutException();
-            }
-        //CHECKSTYLE:OFF
-        } catch (final Exception ex) {
-        //CHECKSTYLE:ON
-            RegExceptionHandler.handleException(ex);
-        }
+        client = CuratorFrameworks.newClient(zkConfig);
     }
     
     @Override
